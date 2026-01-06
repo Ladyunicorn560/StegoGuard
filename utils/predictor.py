@@ -18,7 +18,7 @@ model = tf.keras.applications.EfficientNetB0(
 def predict_image(image: Image.Image):
     """
     Takes PIL Image
-    Returns: (label, confidence)
+    Returns: (label, confidence_percentage)
     """
 
     image = image.convert("RGB")
@@ -28,13 +28,19 @@ def predict_image(image: Image.Image):
 
     features = model.predict(img_array, verbose=0)
 
-    # --------------------------------------------------
-    # TEMP SIMULATION LOGIC
-    # (until stego-trained model is plugged in)
-    # --------------------------------------------------
-    score = float(np.mean(features))
+    # Normalize feature score to 0–1 range
+    raw_score = float(np.mean(features))
 
-    if score > 0.35:
-        return "⚠️ Suspicious", round(score * 100, 2)
+    # Sigmoid-style normalization (simple & safe)
+    normalized_score = 1 / (1 + np.exp(-raw_score))
+
+    confidence = normalized_score * 100
+
+    if confidence >= 75:
+        return "🔴 High Risk", round(confidence, 2)
+    elif confidence >= 60:
+        return "🟠 Medium Risk", round(confidence, 2)
     else:
-        return "🟢 Clean", round((1 - score) * 100, 2)
+        return "🟢 Low Risk", round(100 - confidence, 2)
+
+

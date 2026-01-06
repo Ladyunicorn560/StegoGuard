@@ -13,7 +13,7 @@ st.set_page_config(page_title="StegoGuard", layout="wide")
 # Header
 # --------------------------------------------------
 st.title("🔐 StegoGuard")
-st.subheader("Image-Based Data Exfiltration Detection System")
+st.subheader("Detects Hidden Data Inside Images to Prevent Data Leaks")
 
 st.write(
     "This tool scans image files from a monitored folder and flags "
@@ -62,7 +62,7 @@ if scan_button:
 
                 status, confidence = predict_image(image)
 
-                if "Suspicious" in status:
+                if "High" in status or "Medium" in status:
                     suspicious_count += 1
                 else:
                     clean_count += 1
