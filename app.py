@@ -1,6 +1,7 @@
 import streamlit as st
 import os
 from PIL import Image
+import matplotlib.pyplot as plt
 
 # --------------------------------------------------
 # Page config
@@ -48,20 +49,62 @@ if scan_button:
         if len(images) == 0:
             st.warning("No images found in monitored folder.")
         else:
-            st.success(f"Scanned {len(images)} image(s).")
+            clean_count = 0
+            suspicious_count = 0
 
-            col1, col2 = st.columns(2)
+            results = []
 
-            for idx, img_name in enumerate(images):
+            for img_name in images:
                 img_path = os.path.join(MONITORED_FOLDER, img_name)
                 image = Image.open(img_path)
+                width, height = image.size
 
-                # TEMP LOGIC (placeholder)
-                prediction = "🟢 Clean"
-                confidence = "N/A"
+                # ------------------------------------------
+                # TEMP SECURITY HEURISTIC (Placeholder)
+                # ------------------------------------------
+                if width * height > 2_000_000:  # very large image
+                    status = "⚠️ Suspicious"
+                    suspicious_count += 1
+                else:
+                    status = "🟢 Clean"
+                    clean_count += 1
 
-                with (col1 if idx % 2 == 0 else col2):
-                    st.image(image, caption=img_name, width=400)
-                    st.write(f"**Status:** {prediction}")
-                    st.write(f"**Confidence:** {confidence}")
+                results.append((img_name, image, status))
+
+            # --------------------------------------------------
+            # DASHBOARD METRICS
+            # --------------------------------------------------
+            st.markdown("## 📊 Scan Summary")
+
+            col1, col2, col3 = st.columns(3)
+            col1.metric("Total Images", len(images))
+            col2.metric("🟢 Clean", clean_count)
+            col3.metric("⚠️ Suspicious", suspicious_count)
+
+            # --------------------------------------------------
+            # PIE CHART
+            # --------------------------------------------------
+            fig, ax = plt.subplots()
+            ax.pie(
+                [clean_count, suspicious_count],
+                labels=["Clean", "Suspicious"],
+                autopct="%1.1f%%",
+                startangle=90
+            )
+            ax.axis("equal")
+            st.pyplot(fig)
+
+            st.markdown("---")
+
+            # --------------------------------------------------
+            # IMAGE RESULTS
+            # --------------------------------------------------
+            st.markdown("## 🖼️ Image Analysis Results")
+
+            colA, colB = st.columns(2)
+
+            for idx, (name, image, status) in enumerate(results):
+                with (colA if idx % 2 == 0 else colB):
+                    st.image(image, caption=name, width=400)
+                    st.write(f"**Status:** {status}")
                     st.markdown("---")
