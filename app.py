@@ -2,6 +2,7 @@ import streamlit as st
 import os
 from PIL import Image
 import matplotlib.pyplot as plt
+from utils.predictor import predict_image
 
 # --------------------------------------------------
 # Page config
@@ -59,17 +60,14 @@ if scan_button:
                 image = Image.open(img_path)
                 width, height = image.size
 
-                # ------------------------------------------
-                # TEMP SECURITY HEURISTIC (Placeholder)
-                # ------------------------------------------
-                if width * height > 2_000_000:  # very large image
-                    status = "⚠️ Suspicious"
+                status, confidence = predict_image(image)
+
+                if "Suspicious" in status:
                     suspicious_count += 1
                 else:
-                    status = "🟢 Clean"
                     clean_count += 1
 
-                results.append((img_name, image, status))
+                results.append((img_name, image, status, confidence))
 
             # --------------------------------------------------
             # DASHBOARD METRICS
@@ -103,8 +101,10 @@ if scan_button:
 
             colA, colB = st.columns(2)
 
-            for idx, (name, image, status) in enumerate(results):
+            for idx, (name, image, status, confidence) in enumerate(results):
                 with (colA if idx % 2 == 0 else colB):
                     st.image(image, caption=name, width=400)
                     st.write(f"**Status:** {status}")
+                    st.write(f"**Confidence:** {confidence:.2f}%")
+
                     st.markdown("---")
