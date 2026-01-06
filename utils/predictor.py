@@ -43,4 +43,27 @@ def predict_image(image: Image.Image):
     else:
         return "🟢 Low Risk", round(100 - confidence, 2)
 
+def explain_prediction(status: str, confidence: float) -> str:
+    """
+    Returns a human-readable explanation for the detection result
+    """
+
+    if "High" in status:
+        return (
+            "Significant abnormal visual patterns detected. "
+            "Image characteristics strongly deviate from normal baselines, "
+            "which may indicate hidden data embedding."
+        )
+
+    elif "Medium" in status:
+        return (
+            "Moderate deviation in visual feature distribution observed. "
+            "Some regions show patterns commonly associated with covert data."
+        )
+
+    else:
+        return (
+            "Image appears visually consistent with normal samples. "
+            "No strong indicators of hidden data were detected."
+        )
 

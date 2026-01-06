@@ -2,12 +2,19 @@ import streamlit as st
 import os
 from PIL import Image
 import matplotlib.pyplot as plt
-from utils.predictor import predict_image
+from utils.predictor import predict_image, explain_prediction
+from datetime import datetime
 
 # --------------------------------------------------
 # Page config
 # --------------------------------------------------
 st.set_page_config(page_title="StegoGuard", layout="wide")
+
+# --------------------------------------------------
+# Session state (MUST be at top)
+# --------------------------------------------------
+if "scan_history" not in st.session_state:
+    st.session_state.scan_history = []
 
 # --------------------------------------------------
 # Header
@@ -20,6 +27,33 @@ st.write(
     "potential covert communication attempts where hidden data may "
     "be embedded inside images."
 )
+
+# --------------------------------------------------
+# LAYER 1: Detection Pipeline
+# --------------------------------------------------
+st.markdown("## 🔍 Detection Pipeline")
+
+pipeline_cols = st.columns(5)
+
+steps = [
+    ("📥", "Image Ingestion"),
+    ("🧹", "Preprocessing"),
+    ("🧠", "Feature Extraction"),
+    ("📊", "Risk Scoring"),
+    ("🚨", "Decision")
+]
+
+for col, (icon, label) in zip(pipeline_cols, steps):
+    col.markdown(
+        f"""
+        <div style="text-align:center; padding:10px; border-radius:10px;
+                    background-color:#1f2933;">
+            <h2>{icon}</h2>
+            <p style="font-size:14px;">{label}</p>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
 
 # --------------------------------------------------
 # Configuration
@@ -52,40 +86,47 @@ if scan_button:
         else:
             clean_count = 0
             suspicious_count = 0
-
             results = []
 
             for img_name in images:
                 img_path = os.path.join(MONITORED_FOLDER, img_name)
                 image = Image.open(img_path)
-                width, height = image.size
 
                 status, confidence = predict_image(image)
+                explanation = explain_prediction(status, confidence)
+
 
                 if "High" in status or "Medium" in status:
                     suspicious_count += 1
                 else:
                     clean_count += 1
 
-                results.append((img_name, image, status, confidence))
+                results.append({
+                "image": img_name,
+                "status": status,
+                "confidence": confidence,
+                "explanation": explanation,
+                "time": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+})
+
 
             # --------------------------------------------------
-            # DASHBOARD METRICS
+            # Dashboard Metrics
             # --------------------------------------------------
             st.markdown("## 📊 Scan Summary")
 
             col1, col2, col3 = st.columns(3)
             col1.metric("Total Images", len(images))
             col2.metric("🟢 Clean", clean_count)
-            col3.metric("⚠️ Suspicious", suspicious_count)
+            col3.metric("⚠️ Risky", suspicious_count)
 
             # --------------------------------------------------
-            # PIE CHART
+            # Pie Chart
             # --------------------------------------------------
             fig, ax = plt.subplots()
             ax.pie(
                 [clean_count, suspicious_count],
-                labels=["Clean", "Suspicious"],
+                labels=["Clean", "Risky"],
                 autopct="%1.1f%%",
                 startangle=90
             )
@@ -95,16 +136,36 @@ if scan_button:
             st.markdown("---")
 
             # --------------------------------------------------
-            # IMAGE RESULTS
+            # Image Results
             # --------------------------------------------------
             st.markdown("## 🖼️ Image Analysis Results")
 
             colA, colB = st.columns(2)
 
-            for idx, (name, image, status, confidence) in enumerate(results):
+            for idx, r in enumerate(results):
                 with (colA if idx % 2 == 0 else colB):
-                    st.image(image, caption=name, width=400)
-                    st.write(f"**Status:** {status}")
-                    st.write(f"**Confidence:** {confidence:.2f}%")
+                    img = Image.open(os.path.join(MONITORED_FOLDER, r["image"]))
+                    st.image(img, caption=r["image"], width=400)
+                    st.write(f"**Status:** {r['status']}")
+                    st.write(f"**Confidence:** {r['confidence']:.2f}%")
+                    st.caption(f"🧠 {r['explanation']}")
 
                     st.markdown("---")
+
+            # --------------------------------------------------
+            # LAYER 2: Scan History Logging
+            # --------------------------------------------------
+            st.session_state.scan_history.extend(results)
+
+# --------------------------------------------------
+# LAYER 2: Scan History Table
+# --------------------------------------------------
+st.markdown("## 🧾 Scan History")
+
+if len(st.session_state.scan_history) == 0:
+    st.info("No scans performed yet.")
+else:
+    st.dataframe(
+        st.session_state.scan_history,
+        use_container_width=True
+    )
