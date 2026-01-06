@@ -61,7 +61,7 @@ if scan_button:
                 confidence = "N/A"
 
                 with (col1 if idx % 2 == 0 else col2):
-                    st.image(image, caption=img_name, use_column_width=True)
+                    st.image(image, caption=img_name, width=400)
                     st.write(f"**Status:** {prediction}")
                     st.write(f"**Confidence:** {confidence}")
                     st.markdown("---")
